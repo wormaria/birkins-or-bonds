@@ -108,10 +108,14 @@ def make_table(data, col_widths=None):
 
 
 def add_chart(elements, filename, caption, styles, width=6.5*inch):
-    """Add a chart image with caption."""
+    """Add a chart image with caption, preserving aspect ratio."""
     img_path = IMG_DIR / filename
     if img_path.exists():
-        img = Image(str(img_path), width=width, height=width * 0.55)
+        from PIL import Image as PILImage
+        with PILImage.open(str(img_path)) as pil_img:
+            orig_w, orig_h = pil_img.size
+        aspect = orig_h / orig_w
+        img = Image(str(img_path), width=width, height=width * aspect)
         elements.append(img)
         elements.append(Paragraph(caption, styles["Caption"]))
     else:

@@ -259,44 +259,49 @@ def plot_correlation_heatmap(monthly, save=True):
 def plot_summary_dashboard(stats_df, save=True):
     """KPI-style dashboard comparing key metrics."""
     setup_style()
-    fig, axes = plt.subplots(1, 4, figsize=(16, 5))
+    fig, axes = plt.subplots(1, 4, figsize=(18, 6))
     fig.suptitle("Performance Dashboard (2005–2025)", fontsize=20,
                  fontweight="bold", y=1.02)
 
     metrics = [
         ("cagr", "CAGR", "{:.1%}"),
-        ("volatility", "Annualized Volatility", "{:.1%}"),
+        ("volatility", "Annualized\nVolatility", "{:.1%}"),
         ("sharpe", "Sharpe Ratio", "{:.2f}"),
         ("max_drawdown", "Max Drawdown", "{:.1%}"),
     ]
 
     for ax, (metric, title, fmt) in zip(axes, metrics):
         values = [stats_df.loc[a, metric] for a in ASSET_ORDER]
-        colors = [COLORS[a] for a in ASSET_ORDER]
-        labels = [ASSET_LABELS[a].replace(" ", "\n") for a in ASSET_ORDER]
+        colors_list = [COLORS[a] for a in ASSET_ORDER]
+        labels = [ASSET_LABELS[a] for a in ASSET_ORDER]
 
-        bars = ax.barh(range(len(ASSET_ORDER)), values, color=colors, alpha=0.85,
-                       height=0.6)
+        bars = ax.barh(range(len(ASSET_ORDER)), values, color=colors_list, alpha=0.85,
+                       height=0.55)
 
+        val_range = max(abs(max(values)), abs(min(values)))
         for i, (bar, val) in enumerate(zip(bars, values)):
             x_pos = bar.get_width()
             ha = "left" if x_pos >= 0 else "right"
-            offset = abs(max(values) - min(values)) * 0.05
+            offset = val_range * 0.08
             if x_pos >= 0:
                 x_pos += offset
             else:
                 x_pos -= offset
             ax.text(x_pos, i, fmt.format(val), va="center", ha=ha,
-                    fontsize=11, fontweight="bold", color=COLORS["text"])
+                    fontsize=10, fontweight="bold", color=COLORS["text"])
 
         ax.set_yticks(range(len(ASSET_ORDER)))
         ax.set_yticklabels(labels, fontsize=9)
-        ax.set_title(title, fontsize=12, fontweight="bold", pad=10)
+        ax.set_title(title, fontsize=11, fontweight="bold", pad=10)
         ax.axvline(x=0, color=COLORS["text"], linewidth=0.5)
         ax.grid(True, axis="x", alpha=0.3)
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.invert_yaxis()
+        # Add padding so labels don't overlap bars
+        x_min, x_max = ax.get_xlim()
+        padding = (x_max - x_min) * 0.25
+        ax.set_xlim(x_min - padding * 0.5, x_max + padding)
 
     add_branding(fig)
     plt.tight_layout()
