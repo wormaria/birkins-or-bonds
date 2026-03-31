@@ -278,15 +278,19 @@ def plot_summary_dashboard(stats_df, save=True):
         bars = ax.barh(range(len(ASSET_ORDER)), values, color=colors_list, alpha=0.85,
                        height=0.55)
 
-        val_range = max(abs(max(values)), abs(min(values)))
+        # Always place value labels to the RIGHT of bars (positive side)
+        # to avoid collision with y-axis labels
         for i, (bar, val) in enumerate(zip(bars, values)):
+            val_range = max(abs(v) for v in values)
+            # Place all labels to the right of the bar end, with generous offset
             x_pos = bar.get_width()
-            ha = "left" if x_pos >= 0 else "right"
-            offset = val_range * 0.08
             if x_pos >= 0:
-                x_pos += offset
+                x_pos += val_range * 0.08
+                ha = "left"
             else:
-                x_pos -= offset
+                # For negative bars, place label at the right end (at the tip)
+                x_pos = bar.get_width() + val_range * 0.08
+                ha = "left"
             ax.text(x_pos, i, fmt.format(val), va="center", ha=ha,
                     fontsize=10, fontweight="bold", color=COLORS["text"])
 
@@ -298,10 +302,10 @@ def plot_summary_dashboard(stats_df, save=True):
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.invert_yaxis()
-        # Add padding so labels don't overlap bars
+        # Generous padding for value labels
         x_min, x_max = ax.get_xlim()
-        padding = (x_max - x_min) * 0.25
-        ax.set_xlim(x_min - padding * 0.5, x_max + padding)
+        total_range = x_max - x_min
+        ax.set_xlim(x_min - total_range * 0.05, x_max + total_range * 0.4)
 
     add_branding(fig)
     plt.tight_layout()
