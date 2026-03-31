@@ -1,0 +1,12 @@
+{
+  "description": "Birkins or Bonds \u2014 Asset price data",
+  "assets": {
+    "sp500": "S&P 500 Index (real data via Yahoo Finance)",
+    "birkin": "Herm\u00e8s Birkin 35 Togo mid-market resale (proxy)",
+    "balenciaga": "Balenciaga Classic City mid-market resale (proxy)",
+    "paddington": "Chlo\u00e9 Paddington mid-market resale (proxy)"
+  },
+  "cpi_source": "Federal Reserve Bank of Minneapolis (1983=100)",
+  "date_range": "2005-2025",
+  "methodology": "Handbag prices are constructed proxy series based on Knight Frank KFLII data, auction house records, resale platform benchmarks, and retail price histories. See report for full methodology."
+}
