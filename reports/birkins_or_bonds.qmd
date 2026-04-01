@@ -21,13 +21,13 @@ execute:
 bibliography: references.bib
 ---
 
-# Introduction
+# Executive Summary
 
-In July 2025, Jane Birkin's original Hermès bag sold at Sotheby's Paris for over \$10 million --- a 9,900% return on the approximately \$100,000 paid in 2000, translating to a 20.3% annualized IRR. That single transaction crystallized a question that has percolated through wealth management circles for over a decade: **can a handbag outperform the stock market?**
+In July 2025, Jane Birkin's original Hermès bag sold at Sotheby's Paris for over \$10 million --- a 9,900% return on the approximately \$100,000 paid in 2000. That headline obscures a more complicated reality: by the time of that sale, the broader Birkin resale market had been cooling for three years. According to Bernstein Research's Secondhand Pricing Tracker, the average resale premium for Birkin and Kelly bags fell from 2.2× retail in 2022 to 1.4× by late 2025 --- a 21% decline from peak.
 
-This report subjects that question to rigorous quantitative analysis. We construct proxy time series for three luxury handbag models --- the **Hermès Birkin 35**, the **Balenciaga Classic City**, and the **Chloé Paddington** --- and benchmark them against the **S&P 500** over a 20-year horizon (2005--2025).
+This report subjects the "Birkins as investments" thesis to quantitative analysis, benchmarking three luxury handbag models against both the **S&P 500** and the **US Aggregate Bond Index (AGG)** over 2005--2025. We report both gross and **net-of-transaction-cost** returns, flag the data construction artifacts that inflate risk-adjusted metrics, and conclude that the practical case for handbags as portfolio diversifiers is far weaker than the theoretical one.
 
-Our thesis: not all luxury goods are created equal. The Birkin's exceptional risk-adjusted returns are a function of artificial scarcity and brand capital, not a generalizable property of "luxury handbags." The data tells a more nuanced story than the headlines suggest.
+**Headline: the Birkin's gross Sharpe ratio of 1.21 drops to 0.73 after a 25% round-trip transaction cost --- and even the gross figure is inflated by artificially smooth proxy data.**
 
 # Data & Methodology
 
@@ -35,114 +35,134 @@ Our thesis: not all luxury goods are created equal. The Birkin's exceptional ris
 
 | Asset | Source | Type |
 |-------|--------|------|
-| S&P 500 | Yahoo Finance (^GSPC) | Real market data, monthly close |
-| Hermès Birkin 35 | Knight Frank KFLII, Bernstein Research, auction records | Proxy construction |
-| Balenciaga City | Retail history, Fashionphile, resale platform benchmarks | Proxy construction |
-| Chloé Paddington | Retail history, Etsy/Vestiaire listings, market reports | Proxy construction |
-| US CPI | Federal Reserve Bank of Minneapolis (1983=100) | Real data |
+| S&P 500 | Yahoo Finance (^GSPC) | Real market data |
+| US Agg Bond (AGG) | Yahoo Finance (AGG ETF) | Real market data |
+| Hermès Birkin 35 | Knight Frank KFLII, Bernstein, auctions | Proxy construction |
+| Balenciaga City | Retail history, Fashionphile benchmarks | Proxy construction |
+| Chloé Paddington | Retail history, resale platform listings | Proxy construction |
+| US CPI | Federal Reserve Bank of Minneapolis | Real data |
 
-## Handbag Price Construction
+## Proxy Construction
 
-Handbag "prices" represent **mid-market resale estimates** --- the price a bag in very good condition would fetch on a major authenticated resale platform. The time series are constructed by:
+Handbag "prices" are mid-market resale estimates constructed by anchoring to known retail prices, applying Knight Frank KFLII handbag component returns, calibrating to auction realized prices, and adjusting for resale premium ratios from Bernstein Research. Monthly values are linearly interpolated between annual anchor points.
 
-1. Anchoring to known retail prices at launch and annual increases
-2. Applying Knight Frank Luxury Investment Index (KFLII) handbag component returns where available
-3. Calibrating to auction realized prices (Christie's, Sotheby's) for benchmark models
-4. Adjusting for resale premium/discount ratios from Bernstein Research's Secondhand Pricing Tracker
-5. Linear interpolation between annual anchor points for monthly granularity
+## Critical Caveat: Interpolation Suppresses Volatility
 
-## Limitations
+Linear interpolation between annual anchor points mechanically smooths month-to-month price variation. The reported volatility figures for handbags --- especially the Birkin's 2.4% annualized --- are **artifacts of this data construction**, not evidence of genuinely low price variance. Real transaction-level data, if it were available, would almost certainly show higher volatility. All Sharpe ratios and volatility comparisons involving handbag assets should be interpreted as lower bounds on risk, not precise measurements.
+
+## Other Limitations
 
 - **Survivorship bias**: Only bags in good condition are resold; damaged/lost bags are invisible
-- **Illiquidity**: Unlike equities, selling a handbag takes weeks to months
-- **Transaction costs**: Resale platforms charge 15--30% commission; not reflected in returns
-- **Selection bias**: We track the *most iconic* bags, not a random sample
-- **No dividend equivalent**: Bags generate no income; S&P 500 returns exclude dividends for comparability
+- **Illiquidity**: Selling takes 2--8 weeks vs. milliseconds for equities or bonds
+- **Transaction costs**: 15--30% resale commission or 20--25% auction buyer's premium
+- **Selection bias**: We track iconic bags, not a random sample
+- **No income**: Bags generate no dividends or coupons. S&P and AGG returns exclude dividends/coupons for comparability
 
 # Results
 
-## Headline Performance
+## Performance Summary --- Gross and Net of Fees
 
-Over the 2005--2025 period:
+| Metric | S&P 500 | US Agg Bond | Birkin (Gross) | Birkin (Net 25%) | Balenciaga (Net 25%) | Paddington (Net 25%) |
+|--------|---------|-------------|----------------|------------------|----------------------|----------------------|
+| CAGR | 8.9% | 3.1% | 5.7% | 4.2% | −3.0% | −2.9% |
+| Volatility* | 14.8% | 4.6% | 2.4% | 2.4% | 3.6% | 5.3% |
+| Sharpe | 0.47 | 0.13 | 1.21 | 0.73 | −1.52 | −1.03 |
+| Max Drawdown | −52.6% | −17.2% | −21.8% | −21.8% | −53.8% | −84.0% |
+| Total Return | 448% | 86% | 205% | 129% | −45% | −45% |
 
-| Metric | S&P 500 | Hermès Birkin | Balenciaga City | Chloé Paddington |
-|--------|---------|---------------|-----------------|------------------|
-| CAGR | 8.9% | 5.7% | −1.6% | −1.5% |
-| Volatility | 14.8% | 2.4% | 3.6% | 5.3% |
-| Sharpe Ratio | 0.47 | **1.21** | −1.10 | −0.73 |
-| Max Drawdown | −52.6% | −21.8% | −53.8% | −84.0% |
-| Total Return | 448% | 205% | −27% | −27% |
+*\*Handbag volatility is artificially low due to interpolation between annual data points. Net 25% = after deducting a 25% round-trip transaction cost (typical auction friction).*
 
-**Key finding**: The Birkin's Sharpe ratio of 1.21 is 2.6× the S&P 500's 0.47. This is not because the Birkin generates higher absolute returns --- it doesn't --- but because its volatility is extraordinarily low (2.4% vs. 14.8%). On a risk-adjusted basis, the Birkin is the superior asset.
+The gross Birkin Sharpe ratio of 1.21 is the number that appears in most popular press coverage. But two adjustments materially change the picture: (1) after a 25% transaction cost, the Sharpe falls to **0.73**; and (2) even that figure relies on a volatility number (2.4%) that is suppressed by data smoothing. A more realistic volatility estimate of 5--8% --- still below equities --- would push the net Sharpe into the 0.2--0.4 range, roughly comparable to the S&P 500.
+
+The inclusion of the **US Aggregate Bond Index** directly answers the title question. Bonds returned 3.1% CAGR with 4.6% volatility and a 17.2% maximum drawdown --- a Sharpe of 0.13. The Birkin beats bonds on both an absolute and risk-adjusted basis even after fees. But bonds are liquid, income-generating, and can be bought in any size. The comparison is not as straightforward as CAGR vs. CAGR.
 
 ## Normalized Growth
 
-![Growth of \$100 invested in each asset class from 2005 to 2025.](../images/01_normalized_growth.png){width=100%}
+![Growth of \$100 invested in each asset class from 2005 to 2025. Bonds shown as dashed line. Source: Yahoo Finance, Knight Frank KFLII, resale platform data.](../images/01_normalized_growth.png){width=100%}
 
-The S&P 500 ultimately delivers higher absolute returns (\$548 vs. \$305 for the Birkin), but the path matters. The Birkin's growth curve is remarkably smooth --- it barely registers the 2008 financial crisis, while the S&P 500 lost 52.6% peak-to-trough.
+## The 2022--2025 Correction
+
+The Birkin resale market peaked in 2022, when Bernstein Research reported average resale premiums of 2.2× retail --- meaning a bag purchased for \$10,000 at Hermès resold for ~\$22,200. By late 2025, that premium had compressed to 1.4×. Several factors drove the correction:
+
+- Post-pandemic normalization of luxury demand after the 2020--2021 spending surge
+- Gen Z aspirational demand cooling as economic uncertainty increased
+- Increased secondary market supply as pandemic-era buyers liquidated
+- Hermès retail price increases (+44% since 2015) narrowing the arbitrage between retail and resale
+
+This correction is not a data footnote --- it is a structural feature of the asset class. The Birkin's 20-year track record includes multiple periods of premium compression, and the current softness should temper any extrapolation of past returns.
 
 ## Drawdown Analysis
 
-![Peak-to-trough drawdowns reveal the Birkin's resilience during market stress.](../images/04_drawdowns.png){width=100%}
-
-The Paddington's 84% drawdown illustrates the danger of fashion-cycle risk. The Balenciaga City also destroyed value over 20 years. Only the Birkin maintained consistent appreciation.
+![Peak-to-trough drawdowns for all five asset classes, 2005--2025.](../images/04_drawdowns.png){width=100%}
 
 ## Correlation Structure
 
-![Correlation heatmap of monthly returns. Near-zero correlation between Birkin and equities.](../images/05_correlation_heatmap.png){width=80%}
+![Correlation matrix of monthly returns across all asset classes.](../images/05_correlation_heatmap.png){width=80%}
 
-The Birkin's correlation with the S&P 500 is just **0.06** --- essentially uncorrelated. This makes it a theoretically excellent portfolio diversifier. The Paddington is slightly *negatively* correlated with the Birkin (−0.20), suggesting that Birkin scarcity and fashion-cycle nostalgia are driven by different forces.
+The Birkin's monthly return correlation with the S&P 500 is 0.06 and with bonds is 0.05 --- essentially uncorrelated with both major asset classes. This is the theoretical basis for diversification. However, the practical value of low correlation is limited when the asset cannot be traded freely.
 
-## Portfolio Simulation
+## Portfolio Simulation (Annual Rebalancing)
 
-![Simulated portfolio growth under different allocation strategies.](../images/07_portfolio_simulation.png){width=100%}
+We simulate four allocations rebalanced **annually** (each January). Monthly rebalancing --- the standard assumption in portfolio theory --- is physically impossible for an asset that takes 2--8 weeks to sell. Even annual rebalancing is optimistic; it assumes you can execute a handbag sale and reinvest proceeds within a calendar year.
 
-A 60/40 stocks--Birkin portfolio achieves a CAGR of 7.7% with volatility of just 9.0% --- a Sharpe ratio of 0.60, improving on pure equity exposure. The maximum drawdown falls from −52.6% to −35.9%.
+| Portfolio | CAGR | Volatility | Sharpe | Max DD |
+|-----------|------|-----------|--------|--------|
+| 100% S&P 500 | 8.8% | 14.9% | 0.47 | −52.6% |
+| 60/40 Stocks--Bonds | 6.8% | 9.4% | 0.48 | −31.8% |
+| 60/40 Stocks--Birkin | 7.8% | 8.9% | 0.61 | −34.5% |
+| 50/25/25 Mix | 6.9% | 7.7% | 0.58 | −27.8% |
+
+*Handbag transaction costs are NOT deducted from portfolio simulation returns. If a 25% round-trip cost were applied to each annual Birkin rebalancing, portfolio returns would be materially lower.*
+
+![Simulated portfolio growth of \$100 under annual rebalancing. Transaction costs not deducted from Birkin allocations.](../images/07_portfolio_simulation.png){width=100%}
 
 ## Inflation-Adjusted Returns
 
 ![Real (CPI-adjusted) returns showing purchasing-power preservation.](../images/08_real_returns.png){width=100%}
 
-After adjusting for inflation, the Birkin's real CAGR falls to approximately 3.1%, while the S&P 500 delivers ~6.3%. The Birkin preserves purchasing power; the Paddington and Balenciaga do not.
-
 # Discussion
 
-## What Makes the Birkin Different?
+## What Drives Birkin Returns?
 
-The Birkin's performance is not a property of "luxury handbags" as an asset class --- it is a property of **Hermès's deliberate supply constraint**. Key drivers:
-
-1. **Artificial scarcity**: Hermès produces a limited number of Birkins annually and requires purchase history before offering one
-2. **Price inelasticity**: Annual retail price increases of 5--8% are absorbed by a deep demand pool
-3. **Cultural capital**: The Birkin carries social signaling value that transcends fashion cycles
-4. **Authentication infrastructure**: Platforms like Rebag, Fashionphile, and Vestiaire provide liquidity and trust
-5. **Wealth effect**: As global wealth concentrates, demand for ultra-luxury goods rises faster than supply
+- **Artificial scarcity**: Hermès limits production and requires purchase history before offering a Birkin
+- **Price inelasticity**: Annual retail increases of 5--8% are absorbed by deep global demand
+- **Cultural permanence**: The Birkin carries signaling value that transcends seasonal fashion
+- **Authentication infrastructure**: Rebag, Fashionphile, and Vestiaire provide market liquidity
+- **Wealth concentration**: Demand for Veblen goods rises faster than supply as wealth concentrates
 
 ## The Fashion Cycle Trap
 
-The Balenciaga City and Chloé Paddington tell the opposite story. Both were iconic "It bags" that generated excitement at launch but depreciated as fashion moved on. The Paddington lost 84% of its peak value before nostalgia and a brand reissue partially recovered it.
-
-**Investment implication**: Trend-driven bags are consumption goods, not investment assets. Only bags with permanent brand moats (Hermès, certain Chanel styles) exhibit investment-like behavior.
-
-## Caveats for Investors
-
-1. **Illiquidity premium**: The Birkin's returns partly compensate for illiquidity. Selling takes 2--8 weeks vs. milliseconds for equities.
-2. **Transaction costs**: Resale platforms charge 15--30%; auctions charge 20--25% buyer's premium. Net returns are significantly lower.
-3. **Storage and insurance**: Bags must be stored properly and insured, adding ~1--2% annually.
-4. **No income**: Unlike dividend-paying stocks or coupon-paying bonds, bags generate zero income.
-5. **Concentration risk**: A single bag is a single asset with binary fashion/condition risk.
+The Balenciaga City and Chloé Paddington both lost ~27% gross (worse after fees) over 20 years. Both were iconic "It bags" that depreciated as fashion moved on. The Paddington lost 84% of its peak value before nostalgia partially recovered it. Trend-driven bags are consumption goods, not investment assets. Only bags with permanent brand moats --- Hermès, certain Chanel classics --- exhibit investment-like behavior.
 
 # Conclusion
 
-**Are Birkins better than bonds?** On a risk-adjusted basis, yes --- the Birkin's Sharpe ratio of 1.21 surpasses not only bonds but most equity benchmarks. Its near-zero correlation with equities makes it a theoretically compelling portfolio diversifier.
+## The Practical Case Is Weak
 
-**Are Birkins better than stocks?** In absolute terms, no. The S&P 500's 8.9% CAGR and 448% total return handily beat the Birkin's 5.7% and 205%.
+Despite favorable headline metrics, luxury handbags are impractical portfolio assets for most investors. The obstacles are structural, not incidental:
 
-**Are luxury handbags good investments?** Only if they're Hermès. The Balenciaga and Paddington data demonstrate that "luxury" alone does not create value. Without Hermès's supply constraint and cultural permanence, handbags are depreciating consumer goods.
+- **Transaction costs destroy returns.** A 25% round-trip cost reduces the Birkin's CAGR from 5.7% to 4.2% and its Sharpe from 1.21 to 0.73. For bags sold through auction houses (20--25% buyer's premium + seller's commission), the haircut is even larger.
+- **Illiquidity is not a theoretical concern --- it's a physical one.** You cannot rebalance a portfolio that includes a \$20,000 handbag with the same frequency as one built from ETFs. Our simulation uses annual rebalancing, which is itself optimistic.
+- **The low-volatility story is a data artifact.** Interpolating between annual anchor points mechanically suppresses variance. The Birkin's true monthly volatility is unknowable from public data but almost certainly higher than the 2.4% reported here.
+- **No income.** Bonds pay coupons. Stocks pay dividends. Bags pay nothing. Over 20 years, foregone income compounds into a material opportunity cost.
+- **Concentration risk.** A single bag is a single asset with binary condition and fashion risk. A diversified bond ETF holds thousands of securities.
+- **The market is softening.** The 2022--2025 premium compression suggests the Birkin's best years may be behind it --- or at least that extrapolating the 2010--2022 boom is risky.
 
-The optimal strategy, per our simulation, is a blended portfolio --- 60% equities, 40% Birkin allocation delivers a better Sharpe ratio than either asset alone. Of course, no one should actually construct such a portfolio. The real lesson is about diversification: **uncorrelated assets with positive expected returns improve risk-adjusted outcomes, even when they carry illiquidity and transaction costs.**
+## The Theoretical Case Is Real --- But Narrow
 
-The Birkin is less an investment thesis and more a case study in the economics of scarcity, brand, and cultural capital.
+The Birkin's near-zero correlation with equities and bonds is genuine and theoretically valuable. If transaction costs were lower, liquidity were higher, and price data were more transparent, a small Birkin allocation could improve a portfolio's efficient frontier. The 50/25/25 mix (stocks, bonds, Birkin) shows the best risk-adjusted path, with max drawdown of just 27.8% vs. 52.6% for pure equity.
+
+But this is a theoretical exercise. In practice, the friction costs, illiquidity, and data limitations make the Birkin more interesting as a case study in scarcity economics than as an actionable investment thesis.
+
+## Answering the Title Question
+
+| Question | Answer |
+|----------|--------|
+| Are Birkins better than bonds? | On a gross CAGR basis, yes (5.7% vs. 3.1%). Net of 25% fees, still slightly better (4.2% vs. 3.1%). But bonds are liquid, income-generating, and infinitely divisible. |
+| Are Birkins better than stocks? | No. S&P 500 delivers 8.9% CAGR with no transaction friction, full liquidity, and dividend income. |
+| Are luxury bags good investments? | Only Hermès. Balenciaga and Paddington both lost money. "Luxury" alone creates no investment value. |
+
+**The Birkin is less an investment thesis and more a case study in the economics of scarcity and cultural capital. The numbers are interesting. The practical barriers are prohibitive.**
 
 ---
 
-*Data and code available at: [github.com/mariahworkman/birkins-or-bonds](https://github.com/mariahworkman/birkins-or-bonds)*
+*Data and code available at: [github.com/wormaria/birkins-or-bonds](https://github.com/wormaria/birkins-or-bonds)*

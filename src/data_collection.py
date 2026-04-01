@@ -2,7 +2,8 @@
 data_collection.py — Collect and construct all asset time series.
 
 Data sources:
-  - S&P 500: Yahoo Finance (SPY ETF, monthly close)
+  - S&P 500: Yahoo Finance (^GSPC, monthly close)
+  - US Aggregate Bond Index: Yahoo Finance (AGG ETF, monthly close)
   - Hermès Birkin 35 Togo: Constructed from retail prices, Knight Frank KFLII
     handbag index data, auction records (Christie's, Sotheby's), and resale
     platform benchmarks (Rebag, Fashionphile, Bernstein Research).
@@ -22,6 +23,15 @@ Methodology notes:
     3. Auction house realized prices for benchmark models
     4. Resale platform premium/discount to retail ratios (Bernstein Research)
     5. Expert commentary and market reports
+
+  IMPORTANT — Volatility caveat:
+    Handbag prices are interpolated between annual anchor points, which
+    mechanically suppresses month-to-month variance. The reported volatility
+    figures for handbags (especially the Birkin's 2.4%) are artifacts of
+    smooth interpolation, NOT evidence of genuinely low price variance.
+    Real transaction-level data — if it were available — would almost
+    certainly show higher volatility. All Sharpe ratios and volatility
+    comparisons should be interpreted with this caveat in mind.
 
   All assumptions are documented inline. This is a proxy dataset — see the
   report's Data Limitations section for a full discussion.
@@ -44,7 +54,6 @@ def fetch_sp500(start="2000-01-01", end="2025-12-31"):
     """Download S&P 500 index monthly close prices from Yahoo Finance."""
     spy = yf.download("^GSPC", start=start, end=end, interval="1mo", progress=False)
     if spy.empty:
-        # Fallback to SPY ETF
         spy = yf.download("SPY", start=start, end=end, interval="1mo", progress=False)
     spy = spy[["Close"]].copy()
     if isinstance(spy.columns, pd.MultiIndex):
@@ -53,6 +62,28 @@ def fetch_sp500(start="2000-01-01", end="2025-12-31"):
     spy.index = spy.index.to_period("M").to_timestamp()
     spy = spy[~spy.index.duplicated(keep="first")]
     return spy
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# US Aggregate Bond Index (AGG) — Real market data via Yahoo Finance
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def fetch_bonds(start="2003-01-01", end="2025-12-31"):
+    """
+    Download iShares Core US Aggregate Bond ETF (AGG) monthly close prices.
+    AGG inception: Sep 2003. This is the standard benchmark for US investment-
+    grade bonds (Treasuries + corporates + MBS).
+    """
+    agg = yf.download("AGG", start=start, end=end, interval="1mo", progress=False)
+    if agg.empty:
+        raise RuntimeError("Failed to download AGG bond data from Yahoo Finance")
+    agg = agg[["Close"]].copy()
+    if isinstance(agg.columns, pd.MultiIndex):
+        agg.columns = agg.columns.get_level_values(0)
+    agg.columns = ["bonds"]
+    agg.index = agg.index.to_period("M").to_timestamp()
+    agg = agg[~agg.index.duplicated(keep="first")]
+    return agg
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -103,11 +134,17 @@ def build_birkin_series():
       - 2021: Pandemic luxury boom; resale premium peaks at ~2.0× retail
       - 2022: Peak resale premium 2.2× retail (Bernstein Research);
               retail ~$10,800 → resale ~$23,800
-      - 2023: Cooling; premium drops to ~1.8× (Bernstein)
-      - 2024: KFLII handbags +2.8%; premium ~1.5× retail;
-              retail ~$12,400 → resale ~$18,600
+      - 2023: Cooling begins; premium drops to ~1.8× (Bernstein).
+              Market softness driven by post-pandemic normalization,
+              Gen Z aspirational demand cooling, and increased supply
+              of bags entering the secondary market.
+      - 2024: KFLII handbags +2.8% but premium compressing to ~1.5×;
+              retail ~$12,400 → resale ~$18,600. Bernstein Secondhand
+              Pricing Tracker shows continued decline from 2022 peak.
       - 2025: Premium ~1.4× (Bernstein Dec 2025); retail $13,500 →
-              resale ~$18,900
+              resale ~$18,900. Jane Birkin's original bag sells for
+              $10M at Sotheby's (record), but standard resale market
+              is materially softer than 2021-2022 peak.
 
     Between anchor points, values are interpolated using the KFLII annual
     returns where available, with smoothing to avoid discontinuities.
@@ -267,6 +304,11 @@ def build_annual_dataset():
     sp500_annual = sp500_monthly.groupby(sp500_monthly.index.year).last()
     sp500_annual.index.name = "year"
 
+    # Bonds (AGG) — take December close each year
+    bonds_monthly = fetch_bonds("2003-01-01", "2025-12-31")
+    bonds_annual = bonds_monthly.groupby(bonds_monthly.index.year).last()
+    bonds_annual.index.name = "year"
+
     # Handbags
     birkin = build_birkin_series()
     balenciaga = build_balenciaga_series()
@@ -276,13 +318,14 @@ def build_annual_dataset():
     # Combine
     df = pd.DataFrame({
         "sp500": sp500_annual["sp500"],
+        "bonds": bonds_annual["bonds"],
         "birkin": birkin,
         "balenciaga": balenciaga,
         "paddington": paddington,
         "cpi": cpi,
     })
 
-    # Common date range (2005-2025 has all four assets)
+    # Common date range (2005-2025 has all five assets)
     df = df.loc[2005:2025].copy()
     df.index.name = "year"
 
@@ -293,6 +336,10 @@ def build_monthly_dataset():
     """
     Build monthly time series. For handbags, linearly interpolate
     between annual anchor points to create smooth monthly curves.
+
+    NOTE: This interpolation mechanically suppresses volatility. The
+    reported monthly standard deviations for handbags are lower bounds,
+    not true measures of price variance. See report for discussion.
     """
     annual = build_annual_dataset()
 
@@ -302,6 +349,10 @@ def build_monthly_dataset():
     # S&P 500 — real monthly data
     sp500 = fetch_sp500("2005-01-01", "2025-12-31")
     sp500 = sp500.reindex(months, method="ffill")
+
+    # Bonds (AGG) — real monthly data
+    bonds = fetch_bonds("2005-01-01", "2025-12-31")
+    bonds = bonds.reindex(months, method="ffill")
 
     # Interpolate handbags to monthly
     bag_cols = ["birkin", "balenciaga", "paddington"]
@@ -319,7 +370,7 @@ def build_monthly_dataset():
     cpi_monthly = cpi_monthly.ffill().bfill()
 
     # Combine
-    df = pd.concat([sp500, bags_monthly, cpi_monthly], axis=1)
+    df = pd.concat([sp500, bonds, bags_monthly, cpi_monthly], axis=1)
     df.index.name = "date"
 
     return df
@@ -342,6 +393,7 @@ def save_datasets():
         "description": "Birkins or Bonds — Asset price data",
         "assets": {
             "sp500": "S&P 500 Index (real data via Yahoo Finance)",
+            "bonds": "iShares US Aggregate Bond ETF / AGG (real data via Yahoo Finance)",
             "birkin": "Hermès Birkin 35 Togo mid-market resale (proxy)",
             "balenciaga": "Balenciaga Classic City mid-market resale (proxy)",
             "paddington": "Chloé Paddington mid-market resale (proxy)",
@@ -351,7 +403,9 @@ def save_datasets():
         "methodology": (
             "Handbag prices are constructed proxy series based on Knight Frank "
             "KFLII data, auction house records, resale platform benchmarks, "
-            "and retail price histories. See report for full methodology."
+            "and retail price histories. Monthly values are linearly interpolated "
+            "between annual anchors, which mechanically suppresses volatility. "
+            "See report for full methodology and caveats."
         ),
     }
     with open(DATA_DIR / "metadata.json", "w") as f:

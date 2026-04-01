@@ -3,6 +3,12 @@ visualizations.py — High-quality editorial charts for the Birkins or Bonds rep
 
 Style: Bloomberg meets Vogue — clean, authoritative, minimal decoration.
 Color palette: Finance-inspired with luxury accents.
+
+v2 changes:
+  - Added US Aggregate Bond (AGG) line to all relevant charts
+  - Dashboard now shows net-of-fee metrics
+  - Portfolio simulation uses annual rebalancing
+  - Volatility caveat annotations where appropriate
 """
 
 import pandas as pd
@@ -21,10 +27,10 @@ IMG_DIR = Path(__file__).resolve().parent.parent / "images"
 # Design system — "Bloomberg meets Vogue"
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# Custom palette — finance + luxury
 COLORS = {
     "sp500":       "#1B474D",   # Dark teal — institutional
-    "birkin":      "#C4883A",   # Gold — luxury, Hermès orange-adjacent
+    "bonds":       "#006494",   # Blue — fixed income
+    "birkin":      "#C4883A",   # Gold — luxury, Hermès
     "balenciaga":  "#6B4C8A",   # Purple — avant-garde
     "paddington":  "#A84B2F",   # Terra/rust — vintage warmth
     "accent":      "#20808D",   # Teal accent
@@ -36,12 +42,13 @@ COLORS = {
 
 ASSET_LABELS = {
     "sp500": "S&P 500",
+    "bonds": "US Agg Bond (AGG)",
     "birkin": "Hermès Birkin",
     "balenciaga": "Balenciaga City",
     "paddington": "Chloé Paddington",
 }
 
-ASSET_ORDER = ["sp500", "birkin", "balenciaga", "paddington"]
+ASSET_ORDER = ["sp500", "bonds", "birkin", "balenciaga", "paddington"]
 
 
 def setup_style():
@@ -93,16 +100,17 @@ def plot_normalized_growth(monthly, save=True):
     for asset in ASSET_ORDER:
         prices = monthly[asset].dropna()
         normalized = (prices / prices.iloc[0]) * 100
-        lw = 2.8 if asset == "birkin" else 2.0
-        alpha = 1.0 if asset in ["sp500", "birkin"] else 0.75
+        lw = 2.8 if asset in ["birkin", "sp500"] else 2.0 if asset == "bonds" else 1.6
+        alpha = 1.0 if asset in ["sp500", "birkin", "bonds"] else 0.7
+        ls = "-" if asset != "bonds" else "--"
         ax.plot(normalized.index, normalized, color=COLORS[asset],
-                linewidth=lw, label=ASSET_LABELS[asset], alpha=alpha)
+                linewidth=lw, label=ASSET_LABELS[asset], alpha=alpha, linestyle=ls)
 
     ax.set_title("Growth of $100 Invested (2005–2025)", fontsize=18, fontweight="bold", pad=15)
     ax.set_ylabel("Portfolio Value ($)", fontsize=12)
     ax.axhline(y=100, color=COLORS["muted"], linestyle="--", linewidth=0.8, alpha=0.5)
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, p: f"${x:,.0f}"))
-    ax.legend(loc="upper left", frameon=False, fontsize=11)
+    ax.legend(loc="upper left", frameon=False, fontsize=10)
     ax.grid(True, axis="y", alpha=0.4)
     ax.set_xlim(monthly.index.min(), monthly.index.max())
     ax.spines["top"].set_visible(False)
@@ -127,19 +135,20 @@ def plot_annual_returns(annual, save=True):
 
     fig, ax = plt.subplots(figsize=(14, 6))
     x = np.arange(len(returns))
-    width = 0.2
+    n = len(ASSET_ORDER)
+    width = 0.8 / n
 
     for i, asset in enumerate(ASSET_ORDER):
-        offset = (i - 1.5) * width
-        bars = ax.bar(x + offset, returns[asset] * 100, width,
-                      color=COLORS[asset], label=ASSET_LABELS[asset], alpha=0.85)
+        offset = (i - (n - 1) / 2) * width
+        ax.bar(x + offset, returns[asset] * 100, width,
+               color=COLORS[asset], label=ASSET_LABELS[asset], alpha=0.85)
 
     ax.set_title("Annual Returns by Asset Class", fontsize=18, fontweight="bold", pad=15)
     ax.set_ylabel("Return (%)", fontsize=12)
     ax.set_xticks(x)
     ax.set_xticklabels(returns.index.astype(int), rotation=45, ha="right")
     ax.axhline(y=0, color=COLORS["text"], linewidth=0.8)
-    ax.legend(loc="upper left", frameon=False, fontsize=10, ncol=2)
+    ax.legend(loc="upper left", frameon=False, fontsize=9, ncol=3)
     ax.grid(True, axis="y", alpha=0.3)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
@@ -163,15 +172,17 @@ def plot_rolling_returns(monthly, window=12, save=True):
 
     for asset in ASSET_ORDER:
         rolling = monthly[asset].pct_change(window).dropna() * 100
-        lw = 2.2 if asset in ["sp500", "birkin"] else 1.5
+        lw = 2.2 if asset in ["sp500", "birkin"] else 1.8 if asset == "bonds" else 1.3
+        ls = "-" if asset != "bonds" else "--"
+        alpha = 0.9 if asset in ["sp500", "birkin", "bonds"] else 0.55
         ax.plot(rolling.index, rolling, color=COLORS[asset],
                 linewidth=lw, label=ASSET_LABELS[asset],
-                alpha=0.9 if asset in ["sp500", "birkin"] else 0.65)
+                alpha=alpha, linestyle=ls)
 
     ax.set_title("Rolling 12-Month Returns", fontsize=18, fontweight="bold", pad=15)
     ax.set_ylabel("Trailing 12M Return (%)", fontsize=12)
     ax.axhline(y=0, color=COLORS["text"], linewidth=0.8, alpha=0.5)
-    ax.legend(loc="upper left", frameon=False, fontsize=10)
+    ax.legend(loc="upper left", frameon=False, fontsize=9, ncol=2)
     ax.grid(True, axis="y", alpha=0.3)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
@@ -198,13 +209,14 @@ def plot_drawdowns(monthly, save=True):
         prices = monthly[asset].dropna()
         cummax = prices.cummax()
         dd = ((prices - cummax) / cummax) * 100
-        ax.fill_between(dd.index, dd, 0, color=COLORS[asset], alpha=0.15)
+        ax.fill_between(dd.index, dd, 0, color=COLORS[asset], alpha=0.12)
+        ls = "-" if asset != "bonds" else "--"
         ax.plot(dd.index, dd, color=COLORS[asset], linewidth=1.5,
-                label=ASSET_LABELS[asset], alpha=0.8)
+                label=ASSET_LABELS[asset], alpha=0.8, linestyle=ls)
 
     ax.set_title("Drawdown from Peak", fontsize=18, fontweight="bold", pad=15)
     ax.set_ylabel("Drawdown (%)", fontsize=12)
-    ax.legend(loc="lower left", frameon=False, fontsize=10)
+    ax.legend(loc="lower left", frameon=False, fontsize=9, ncol=2)
     ax.grid(True, axis="y", alpha=0.3)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
@@ -230,7 +242,7 @@ def plot_correlation_heatmap(monthly, save=True):
 
     labels = [ASSET_LABELS[a] for a in ASSET_ORDER]
 
-    fig, ax = plt.subplots(figsize=(8, 7))
+    fig, ax = plt.subplots(figsize=(9, 8))
     mask = np.triu(np.ones_like(corr, dtype=bool), k=1)
 
     cmap = sns.diverging_palette(220, 20, as_cmap=True)
@@ -238,10 +250,10 @@ def plot_correlation_heatmap(monthly, save=True):
                 annot=True, fmt=".2f", linewidths=2, linecolor=COLORS["bg"],
                 xticklabels=labels, yticklabels=labels,
                 cbar_kws={"shrink": 0.8, "label": "Correlation"},
-                annot_kws={"size": 13, "weight": "bold"}, ax=ax)
+                annot_kws={"size": 12, "weight": "bold"}, ax=ax)
 
     ax.set_title("Return Correlations (Monthly)", fontsize=18, fontweight="bold", pad=15)
-    ax.tick_params(labelsize=11)
+    ax.tick_params(labelsize=10)
     plt.setp(ax.get_xticklabels(), rotation=30, ha="right")
     add_branding(fig)
 
@@ -253,21 +265,21 @@ def plot_correlation_heatmap(monthly, save=True):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Chart 6: Summary stats dashboard
+# Chart 6: Summary stats dashboard (gross AND net-of-fees)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def plot_summary_dashboard(stats_df, save=True):
-    """KPI-style dashboard comparing key metrics."""
+    """KPI-style dashboard: gross CAGR, net CAGR (25% fee), volatility, Sharpe (net)."""
     setup_style()
-    fig, axes = plt.subplots(1, 4, figsize=(18, 6))
+    fig, axes = plt.subplots(1, 4, figsize=(18, 6.5))
     fig.suptitle("Performance Dashboard (2005–2025)", fontsize=20,
                  fontweight="bold", y=1.02)
 
     metrics = [
-        ("cagr", "CAGR", "{:.1%}"),
-        ("volatility", "Annualized\nVolatility", "{:.1%}"),
-        ("sharpe", "Sharpe Ratio", "{:.2f}"),
-        ("max_drawdown", "Max Drawdown", "{:.1%}"),
+        ("cagr", "CAGR (Gross)", "{:.1%}"),
+        ("cagr_net_25", "CAGR (Net 25% Fee)", "{:.1%}"),
+        ("volatility", "Annualized\nVolatility*", "{:.1%}"),
+        ("sharpe_net_25", "Sharpe (Net 25% Fee)", "{:.2f}"),
     ]
 
     for ax, (metric, title, fmt) in zip(axes, metrics):
@@ -275,38 +287,32 @@ def plot_summary_dashboard(stats_df, save=True):
         colors_list = [COLORS[a] for a in ASSET_ORDER]
         labels = [ASSET_LABELS[a] for a in ASSET_ORDER]
 
-        bars = ax.barh(range(len(ASSET_ORDER)), values, color=colors_list, alpha=0.85,
-                       height=0.55)
+        bars = ax.barh(range(len(ASSET_ORDER)), values, color=colors_list,
+                       alpha=0.85, height=0.5)
 
-        # Always place value labels to the RIGHT of bars (positive side)
-        # to avoid collision with y-axis labels
+        val_range = max(abs(v) for v in values) if values else 1
         for i, (bar, val) in enumerate(zip(bars, values)):
-            val_range = max(abs(v) for v in values)
-            # Place all labels to the right of the bar end, with generous offset
             x_pos = bar.get_width()
-            if x_pos >= 0:
-                x_pos += val_range * 0.08
-                ha = "left"
-            else:
-                # For negative bars, place label at the right end (at the tip)
-                x_pos = bar.get_width() + val_range * 0.08
-                ha = "left"
-            ax.text(x_pos, i, fmt.format(val), va="center", ha=ha,
+            x_pos += val_range * 0.08
+            ax.text(x_pos, i, fmt.format(val), va="center", ha="left",
                     fontsize=10, fontweight="bold", color=COLORS["text"])
 
         ax.set_yticks(range(len(ASSET_ORDER)))
         ax.set_yticklabels(labels, fontsize=9)
-        ax.set_title(title, fontsize=11, fontweight="bold", pad=10)
+        ax.set_title(title, fontsize=10, fontweight="bold", pad=10)
         ax.axvline(x=0, color=COLORS["text"], linewidth=0.5)
         ax.grid(True, axis="x", alpha=0.3)
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.invert_yaxis()
-        # Generous padding for value labels
         x_min, x_max = ax.get_xlim()
         total_range = x_max - x_min
-        ax.set_xlim(x_min - total_range * 0.05, x_max + total_range * 0.4)
+        ax.set_xlim(x_min - total_range * 0.05, x_max + total_range * 0.45)
 
+    fig.text(0.01, -0.02,
+             "*Handbag volatility is artificially suppressed by interpolation between annual data points. "
+             "Real volatility would be higher.",
+             fontsize=7.5, color=COLORS["muted"], ha="left", va="top", fontstyle="italic")
     add_branding(fig)
     plt.tight_layout()
     if save:
@@ -316,11 +322,11 @@ def plot_summary_dashboard(stats_df, save=True):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Chart 7: Portfolio simulation
+# Chart 7: Portfolio simulation (annual rebalancing)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def plot_portfolio_simulation(monthly, save=True):
-    """Portfolio growth simulation."""
+    """Portfolio growth simulation with annual rebalancing."""
     from src.analysis import simulate_portfolios
     setup_style()
 
@@ -328,25 +334,26 @@ def plot_portfolio_simulation(monthly, save=True):
 
     fig, ax = plt.subplots(figsize=(12, 6.5))
 
-    port_colors = ["#1B474D", "#C4883A", "#20808D", "#A84B2F"]
+    port_colors = ["#1B474D", "#006494", "#C4883A", "#20808D"]
+    port_styles = ["-", "--", "-", "-."]
 
-    for (name, res), color in zip(port_results.items(), port_colors):
+    for (name, res), color, ls in zip(port_results.items(), port_colors, port_styles):
         cum = res["cumulative"]
-        lw = 2.5 if "60/40" in name else 1.8
+        lw = 2.5 if "Birkin" in name else 2.0
         ax.plot(cum.index, cum, color=color, linewidth=lw,
-                label=f"{name}  (CAGR {res['cagr']:.1%})", alpha=0.9)
+                label=f"{name}  (CAGR {res['cagr']:.1%})", alpha=0.9, linestyle=ls)
 
-    ax.set_title("Portfolio Simulations: Growth of $100",
+    ax.set_title("Portfolio Simulations: Growth of $100 (Annual Rebalancing)",
                  fontsize=18, fontweight="bold", pad=15)
     ax.set_ylabel("Portfolio Value ($)", fontsize=12)
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, p: f"${x:,.0f}"))
     ax.axhline(y=100, color=COLORS["muted"], linestyle="--", linewidth=0.8, alpha=0.4)
-    ax.legend(loc="upper left", frameon=False, fontsize=10)
+    ax.legend(loc="upper left", frameon=False, fontsize=9.5)
     ax.grid(True, axis="y", alpha=0.3)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.set_xlim(monthly.index.min(), monthly.index.max())
-    add_branding(fig, "Rebalanced monthly | RF = 2.5%")
+    add_branding(fig, "Rebalanced annually (Jan) | RF = 2.5% | Handbag txn costs not deducted from portfolio sim")
 
     plt.tight_layout()
     if save:
@@ -370,17 +377,18 @@ def plot_real_returns(annual, save=True):
     for asset in ASSET_ORDER:
         real_price = annual[asset] / deflator
         normalized = (real_price / real_price.iloc[0]) * 100
-        lw = 2.5 if asset in ["sp500", "birkin"] else 1.8
+        lw = 2.5 if asset in ["sp500", "birkin"] else 2.0 if asset == "bonds" else 1.6
+        ls = "-" if asset != "bonds" else "--"
         ax.plot(annual.index, normalized, color=COLORS[asset],
                 linewidth=lw, label=ASSET_LABELS[asset],
-                marker="o", markersize=4, alpha=0.9)
+                marker="o", markersize=3.5, alpha=0.9, linestyle=ls)
 
     ax.set_title("Inflation-Adjusted Growth of $100 (Real Returns)",
                  fontsize=18, fontweight="bold", pad=15)
     ax.set_ylabel("Real Value (2005 dollars)", fontsize=12)
     ax.axhline(y=100, color=COLORS["muted"], linestyle="--", linewidth=0.8, alpha=0.5)
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda x, p: f"${x:,.0f}"))
-    ax.legend(loc="upper left", frameon=False, fontsize=11)
+    ax.legend(loc="upper left", frameon=False, fontsize=10)
     ax.grid(True, axis="y", alpha=0.3)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
@@ -406,19 +414,30 @@ def plot_rolling_volatility(monthly, window=12, save=True):
 
     for asset in ASSET_ORDER:
         rolling_vol = returns[asset].rolling(window).std() * np.sqrt(12) * 100
-        lw = 2.2 if asset in ["sp500", "birkin"] else 1.5
+        lw = 2.2 if asset in ["sp500", "birkin"] else 1.8 if asset == "bonds" else 1.3
+        ls = "-" if asset != "bonds" else "--"
+        alpha = 0.9 if asset in ["sp500", "birkin", "bonds"] else 0.55
         ax.plot(rolling_vol.index, rolling_vol, color=COLORS[asset],
                 linewidth=lw, label=ASSET_LABELS[asset],
-                alpha=0.9 if asset in ["sp500", "birkin"] else 0.65)
+                alpha=alpha, linestyle=ls)
 
     ax.set_title("Rolling 12-Month Annualized Volatility",
                  fontsize=18, fontweight="bold", pad=15)
     ax.set_ylabel("Volatility (%)", fontsize=12)
-    ax.legend(loc="upper right", frameon=False, fontsize=10)
+    ax.legend(loc="upper right", frameon=False, fontsize=9, ncol=2)
     ax.grid(True, axis="y", alpha=0.3)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.set_xlim(monthly.index.min(), monthly.index.max())
+
+    # Add caveat annotation
+    ax.text(0.02, 0.95,
+            "NOTE: Handbag volatility is mechanically suppressed\n"
+            "by interpolation between annual data points",
+            transform=ax.transAxes, fontsize=8, color=COLORS["muted"],
+            va="top", ha="left", fontstyle="italic",
+            bbox=dict(boxstyle="round,pad=0.3", facecolor=COLORS["bg"],
+                      edgecolor=COLORS["grid"], alpha=0.9))
     add_branding(fig)
 
     plt.tight_layout()
@@ -444,7 +463,7 @@ def generate_all_charts():
     from src.analysis import compute_summary_stats
     stats = compute_summary_stats(monthly, annual)
 
-    print("\n🎨 Generating visualizations...")
+    print("\n🎨 Generating visualizations (v2)...")
     plot_normalized_growth(monthly)
     plot_annual_returns(annual)
     plot_rolling_returns(monthly)
